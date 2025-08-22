@@ -6,12 +6,14 @@ const app = express();
 
 // Configuração do CORS
 const corsOptions = {
-  origin: ["https://acervo-literario.vercel.app/"], // substitua pela URL do seu frontend
+  origin: [
+    "https://acervo-literario.vercel.app", // frontend deploy
+    "http://localhost:8080"                // frontend local
+  ],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 };
 
-// Habilita CORS com as opções
 app.use(cors(corsOptions));
 
 // Habilita JSON no body das requisições
