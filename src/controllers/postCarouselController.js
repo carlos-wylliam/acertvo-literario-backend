@@ -15,7 +15,7 @@ const s3 = new AWS.S3({
 const createCarouselPost = async (req, res) => {
     try {
         const { title, tags } = req.body;
-        const author = req.user.id; // vem do seu authMiddleware
+        const author = req.user.id;
 
         if (!title?.trim()) {
             return res.status(400).json({ error: "Título é obrigatório" });
@@ -25,7 +25,6 @@ const createCarouselPost = async (req, res) => {
             return res.status(400).json({ error: "Envie pelo menos uma imagem" });
         }
 
-        // Upload de cada imagem para o Backblaze
         const uploadedUrls = [];
         for (const file of req.files) {
             const fileExtension = path.extname(file.originalname);
@@ -40,10 +39,9 @@ const createCarouselPost = async (req, res) => {
             };
 
             const data = await s3.upload(params).promise();
-            uploadedUrls.push(data.Location);
+            uploadedUrls.push(data.Location); // garante URL completa
         }
 
-        // Cria o post no MongoDB
         const newPost = await Post.create({
             postType: "carousel",
             title,
@@ -77,31 +75,28 @@ const createVideoPost = async (req, res) => {
 
         const file = req.file;
 
-        // valida se é vídeo
         if (!file.mimetype.startsWith("video/")) {
             return res.status(400).json({ error: "O arquivo enviado não é um vídeo válido" });
         }
 
-        // gera nome único
         const fileExtension = path.extname(file.originalname);
         const fileName = crypto.randomBytes(16).toString("hex") + fileExtension;
 
-        // upload no Backblaze
         const params = {
             Bucket: "poetista-clau",
             Key: fileName,
             Body: file.buffer,
             ContentType: file.mimetype,
+            ACL: "public-read", // garante acesso público
         };
 
         const data = await s3.upload(params).promise();
 
-        // cria post no banco
         const newPost = await Post.create({
             postType: "video",
             title,
             tags: tags ? tags.split(",").map(t => t.trim()) : [],
-            videoUrl: data.Location,
+            videoUrl: data.Location, // sempre retorna URL completa
             author,
         });
 
@@ -109,7 +104,6 @@ const createVideoPost = async (req, res) => {
             message: "Post de vídeo criado com sucesso!",
             post: newPost,
         });
-
     } catch (error) {
         console.error("Erro ao criar post de vídeo:", error);
         res.status(500).json({ error: error.message });
