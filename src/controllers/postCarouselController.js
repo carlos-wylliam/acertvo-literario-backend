@@ -61,53 +61,52 @@ const createCarouselPost = async (req, res) => {
 };
 
 const createVideoPost = async (req, res) => {
-    try {
-        const { title, tags } = req.body;
-        const author = req.user.id;
+  try {
+    const { title, tags } = req.body;
+    const author = req.user.id;
 
-        if (!title?.trim()) {
-            return res.status(400).json({ error: "Título é obrigatório" });
-        }
+    if (!title?.trim()) return res.status(400).json({ error: "Título é obrigatório" });
+    if (!req.file) return res.status(400).json({ error: "Envie um vídeo" });
+    if (!req.file.mimetype.startsWith("video/"))
+      return res.status(400).json({ error: "O arquivo enviado não é um vídeo válido" });
 
-        if (!req.file) {
-            return res.status(400).json({ error: "Envie um vídeo" });
-        }
+    const file = req.file;
+    const fileExtension = path.extname(file.originalname);
+    const fileName = crypto.randomBytes(16).toString("hex") + fileExtension;
 
-        const file = req.file;
+    // Converte buffer em stream
+    const stream = require("stream");
+    const readStream = new stream.PassThrough();
+    readStream.end(file.buffer);
 
-        if (!file.mimetype.startsWith("video/")) {
-            return res.status(400).json({ error: "O arquivo enviado não é um vídeo válido" });
-        }
+    // Upload via stream
+    const params = {
+      Bucket: "poetista-clau",
+      Key: fileName,
+      Body: readStream,
+      ContentType: file.mimetype,
+      ACL: "public-read",
+    };
 
-        const fileExtension = path.extname(file.originalname);
-        const fileName = crypto.randomBytes(16).toString("hex") + fileExtension;
+    const data = await s3.upload(params).promise();
 
-        const params = {
-            Bucket: "poetista-clau",
-            Key: fileName,
-            Body: file.buffer,
-            ContentType: file.mimetype,
-            ACL: "public-read", // garante acesso público
-        };
+    // Cria o post no banco
+    const newPost = await Post.create({
+      postType: "video",
+      title,
+      tags: tags ? tags.split(",").map(t => t.trim()) : [],
+      videoUrl: data.Location, // URL pública do Backblaze
+      author,
+    });
 
-        const data = await s3.upload(params).promise();
-
-        const newPost = await Post.create({
-            postType: "video",
-            title,
-            tags: tags ? tags.split(",").map(t => t.trim()) : [],
-            videoUrl: data.Location, // sempre retorna URL completa
-            author,
-        });
-
-        res.status(201).json({
-            message: "Post de vídeo criado com sucesso!",
-            post: newPost,
-        });
-    } catch (error) {
-        console.error("Erro ao criar post de vídeo:", error);
-        res.status(500).json({ error: error.message });
-    }
+    res.status(201).json({
+      message: "Post de vídeo criado com sucesso!",
+      post: newPost,
+    });
+  } catch (error) {
+    console.error("Erro ao criar post de vídeo:", error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 module.exports = { createCarouselPost, createVideoPost };
