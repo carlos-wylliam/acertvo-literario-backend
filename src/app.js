@@ -6,7 +6,7 @@ const app = express();
 
 // Configuração do CORS
 const corsOptions = {
-  origin: ["https://acertvo-literario-backend.onrender.com"], // substitua pela URL do seu frontend
+  origin: ["https://acervo-literario.vercel.app/"], // substitua pela URL do seu frontend
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 };
