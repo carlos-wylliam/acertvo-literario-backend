@@ -89,13 +89,15 @@ const createVideoPost = async (req, res) => {
     };
 
     const data = await s3.upload(params).promise();
+    console.log(data);
 
+    const publicUrl = `https://poetista-clau.s3.us-east-005.backblazeb2.com/${data.Key}`
     // Cria o post no banco
     const newPost = await Post.create({
       postType: "video",
       title,
       tags: tags ? tags.split(",").map(t => t.trim()) : [],
-      videoUrl: data.Location, // URL pública do Backblaze
+      videoUrl: publicUrl, // URL pública do Backblaze
       author,
     });
 
